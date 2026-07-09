@@ -1,3 +1,5 @@
+<div align="center">
+
 ```
                 __    __             __                    
    __  ______ _/ /_  / /__      ____/ /_  ______ ___  ____ 
@@ -5,7 +7,8 @@
  / /_/ / /_/ / /_/ / ,< /_____/ /_/ / /_/ / / / / / / /_/ /
  \__, /\__,_/_.___/_/|_|      \__,_/\__,_/_/ /_/ /_/ .___/ 
 /____/                                            /_/      
-
+```
+</div>
 Downloads books from [books.yandex.ru](https://books.yandex.ru) and saves them as epub.
 
 You need **Yandex Plus** subscription — or the book must be free.
