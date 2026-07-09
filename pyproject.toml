@@ -13,3 +13,13 @@ dependencies = [
 dev = [
     "ruff>=0.15.20",
 ]
+[build-system]
+requires = ["uv_build>=0.2.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "yabk_dump"
+module-root = "src"
+
+[project.scripts]
+yabk-dump = "yabk_dump.cli:run"
