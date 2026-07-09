@@ -1,7 +1,7 @@
 import logging
 import os
 import pathlib
-from core import YandexBook, BOOKS_DOMAIN
+from yabk_dump.core import YandexBook, BOOKS_DOMAIN
 import questionary
 
 logformat = "%(asctime)s (%(name)s) %(levelname)s %(module)s.%(funcName)s():%(lineno)d  %(message)s"
