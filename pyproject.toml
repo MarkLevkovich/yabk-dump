@@ -5,6 +5,7 @@ requires-python = ">=3.12"
 dependencies = [
     "pycookiecheat>=0.8.0",
     "pycryptodome>=3.23.0",
+    "questionary>=2.1.1",
     "requests>=2.34.2",
 ]
 
