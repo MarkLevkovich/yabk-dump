@@ -1,5 +1,4 @@
 import os
-import argparse
 import shutil
 import array
 import base64
@@ -66,7 +65,7 @@ class Downloader:
         shutil.rmtree(self.outdir)
 
     def delete_css(self):
-        for root, _, files in os.walk(".", topdown=False):
+        for root, _, files in os.walk(self.outdir, topdown=False):
             for name in files:
                 if name.lower().endswith(".css"):
                     with open(os.path.join(root, name), "w", encoding="UTF-8") as f:
@@ -183,23 +182,5 @@ class YandexBook:
         self.cookies = cookies
 
     def get_book(self, bookid):
-        outdir = os.path.join(self.outdir, bookid)
-        downloader = Downloader(outdir=outdir, cookies=self.cookies)
+        downloader = Downloader(outdir=self.outdir, cookies=self.cookies)
         return BookDownloader(bookid=bookid, downloader=downloader)
-
-
-def get_cookies():
-    auth_cookie_name = "Session_id"
-    if os.environ.get("SESSION_ID") is not None:
-        session_id = os.environ.get("SESSION_ID")
-    else:
-        try:
-            from pycookiecheat import chrome_cookies
-
-            cc = chrome_cookies(f"https://{BOOKS_DOMAIN}")
-            session_id = cc[auth_cookie_name]
-        except Exception:
-            session_id = input(
-                f"Enter {auth_cookie_name} cookie\n(your browser -> developer tools -> application -> Cookies -> https://{BOOKS_DOMAIN} -> {auth_cookie_name} -> Value) :"
-            )
-    return {auth_cookie_name: session_id}
