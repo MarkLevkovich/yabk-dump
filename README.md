@@ -1,4 +1,4 @@
-> **yabk-dump** is a significantly enhanced fork of [yandex_books_downloader](https://github.com/alex123012/yandex_books_downloader) by alex123012 — rewritten with an interactive CLI, modern architecture, proper error handling, and uv-based packaging.
+> **yabk-dump** is a significantly enhanced fork of [bookmate_downloader](https://github.com/ilyakharlamov/bookmate_downloader) by ilyakharlamov — rewritten for YandexBooks with an interactive CLI, modern architecture, proper error handling, and uv-based packaging.
 
 <div align="center">
 
