@@ -1,7 +1,7 @@
 import logging
 import os
 import pathlib
-from yabk_dump.core import YandexBook, BOOKS_DOMAIN
+from yabk_dump.core import BookClient, SERVICE_DOMAIN
 import questionary
 from colorama import Fore, Style, init
 
@@ -40,12 +40,12 @@ def get_cookies():
         try:
             from pycookiecheat import chrome_cookies
 
-            cc = chrome_cookies(f"https://{BOOKS_DOMAIN}")
+            cc = chrome_cookies(f"https://{SERVICE_DOMAIN}")
             session_id = cc[auth_cookie_name]
         except Exception:
             session_id = input(
                 f"Enter {auth_cookie_name} cookie\n"
-                f"(Open browser DevTools → Application → Cookies → https://{BOOKS_DOMAIN}\n"
+                f"(Open browser DevTools → Application → Cookies → https://{SERVICE_DOMAIN}\n"
                 f" find {auth_cookie_name} and copy its Value): "
             )
     return {auth_cookie_name: session_id}
@@ -98,16 +98,16 @@ def run():
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
-        yandex_book = YandexBook(outdir=outdir, cookies=get_cookies())
-        book = yandex_book.get_book(bookid=bookid)
+        client = BookClient(output_dir=outdir, cookies=get_cookies())
+        book = client.get_book(book_id=bookid)
         if download == "Yes":
-            book.download()
+            book.run()
         if del_css == "Yes":
-            book.delete_css()
+            book.clear_styles()
         if make_epub == "Yes":
-            book.make_epub()
+            book.build_epub()
         if del_downloaded == "Yes":
-            book.delete_downloaded()
+            book.cleanup()
         text = f"""
     Book successfully downloaded!
     Source files are saved in: {outdir}

@@ -8,53 +8,55 @@
  \__, /\__,_/_.___/_/|_|      \__,_/\__,_/_/ /_/ /_/ .___/ 
 /____/                                            /_/      
 ```
+
 </div>
-Downloads books from [books.yandex.ru](https://books.yandex.ru) and saves them as epub.
 
-You need **Yandex Plus** subscription — or the book must be free.
+Save books from [books.yandex.ru](https://books.yandex.ru) as EPUB files you can keep offline, transfer to an e-reader, or archive.
 
-Works on macOS and Linux. Windows users — use WSL.
+Requires a **Yandex Plus** subscription unless the book is available for free.
 
-## Install
+Compatible with macOS and Linux. On Windows, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
+
+## Quick start
 
 ```bash
 uv tool install yabk-dump
-```
-
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
-
-## Usage
-
-```bash
 yabk-dump
 ```
 
-The program will walk you through:
+Python 3.12 or newer and [uv](https://docs.astral.sh/uv/) are required.
 
-1. **Book ID** — open the book on books.yandex.ru and copy the ID from the URL.  
-   For `https://books.yandex.ru/book/KFHDG3bp/` the ID is `KFHDG3bp`.
+## What happens when you run it
 
-2. **Session ID** — you'll be asked for it unless `pycookiecheat` can grab it from Chrome automatically.
+The tool asks you a few questions and takes care of the rest:
 
-   To get it manually:
-   - Log into [books.yandex.ru](https://books.yandex.ru) in your browser.
-   - Open Developer Tools (`F12`).
-   - Go to **Application** → **Cookies** → `https://books.yandex.ru`.
-   - Find `Session_id`, copy the value.
+1. **Paste the book URL** from your browser — the ID is extracted automatically.
+2. **Session ID** — fetched from Chrome via `pycookiecheat` if available. Otherwise you can paste it manually or set the `SESSION_ID` env variable.
+3. **Output folder** — defaults to `~/Downloads/yandex_books`.
+4. **Processing options**:
+   - Download the book content
+   - Strip inline CSS (recommended for cleaner output)
+   - Package everything into a valid `.epub`
+   - Delete the raw source files after packaging
 
-   You can also set the `SESSION_ID` environment variable to skip the prompt entirely.
+The resulting EPUB appears next to the output directory (e.g. `~/Downloads/yandex_books.epub`).
 
-3. **Where to save** — default is `~/Downloads/yandex_books`.
+## Manual session ID
 
-4. **What to do** — the CLI will ask step by step:
-   - Download book content
-   - Strip CSS from files (makes epub cleaner)
-   - Package as `.epub`
-   - Delete the raw files after packaging
+If automatic cookie extraction fails:
 
-The epub lands next to the output folder with the same name (e.g. `~/Downloads/yandex_books.epub`).
+1. Log into [books.yandex.ru](https://books.yandex.ru) in your browser.
+2. Open Developer Tools (`F12`), go to **Application** > **Cookies** > `https://books.yandex.ru`.
+3. Copy the value of `Session_id`.
 
-## From source
+You can also export it as an environment variable to skip the prompt entirely:
+
+```bash
+export SESSION_ID="your-session-id-here"
+yabk-dump
+```
+
+## Building from source
 
 ```bash
 git clone https://github.com/levkovichm/yabk-dump
@@ -63,10 +65,10 @@ uv sync
 uv run yabk-dump
 ```
 
-## Why would you strip CSS?
+## Why strip CSS?
 
-Yandex books come with a bunch of inline CSS that some epub readers handle poorly. Clearing it gives you a clean slate — you can then apply your own styles in Calibre or your reader of choice.
+Yandex books embed inline styles that some EPUB readers render poorly. Clearing them leaves a clean document that you can reformat with [Calibre](https://calibre-ebook.com/) or your preferred reader.
 
-## Recommended tools
+## Related
 
-- [Calibre](https://calibre-ebook.com/) — book management, format conversion, editing.
+- [Calibre](https://calibre-ebook.com/) — cross-platform ebook management and format conversion

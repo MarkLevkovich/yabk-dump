@@ -9,178 +9,180 @@ import requests
 from Crypto.Cipher import AES
 
 
-BOOKS_DOMAIN = "books.yandex.ru"
+SERVICE_DOMAIN = "books.yandex.ru"
 
 
-def bytess(arr):
-    assert type(arr) in [list]
-    return array.array("B", arr).tobytes()
-
-
-def zipdir(path, ziph):
-    top = path
-    for root, _, files in os.walk(path):
-        for filename in files:
-            if filename != "mimetype":
-                continue
-            src = os.path.join(root, filename)
-            ziph.write(
-                filename=src,
-                arcname=os.path.relpath(src, top),
-                compress_type=zipfile.ZIP_STORED,
-            )
-    for root, _, files in os.walk(path):
-        for filename in files:
-            if filename == "mimetype":
-                continue
-            src = os.path.join(root, filename)
-            ziph.write(filename=src, arcname=os.path.relpath(src, top))
-
-
-class Downloader:
-    def __init__(self, outdir, cookies):
-        self.outdir = outdir
+class FileManager:
+    def __init__(self, output_dir, cookies):
+        self.output_dir = output_dir
         self.cookies = cookies
 
-    def save_bytes(self, bts, name):
-        fpath = os.path.join(self.outdir, name)
-        dirpath = os.path.dirname(fpath)
-        if not os.path.exists(dirpath):
-            os.makedirs(dirpath)
-        with open(fpath, "wb") as fout:
-            fout.write(bts)
-            fout.close()
+    @staticmethod
+    def _list_to_bytes(values):
+        assert isinstance(values, list)
+        return array.array("B", values).tobytes()
 
-    def request_url(self, url):
-        logging.debug("downloading %s ...", url)
+    @staticmethod
+    def _archive_directory(directory, archive):
+        top = directory
+        for root, _, files in os.walk(directory):
+            for filename in files:
+                if filename != "mimetype":
+                    continue
+                src = os.path.join(root, filename)
+                archive.write(
+                    filename=src,
+                    arcname=os.path.relpath(src, top),
+                    compress_type=zipfile.ZIP_STORED,
+                )
+        for root, _, files in os.walk(directory):
+            for filename in files:
+                if filename == "mimetype":
+                    continue
+                src = os.path.join(root, filename)
+                archive.write(filename=src, arcname=os.path.relpath(src, top))
+
+    def fetch_url(self, url):
+        logging.debug("fetching %s", url)
         response = requests.get(url, cookies=self.cookies, timeout=30)
-        logging.debug("response:%s", response)
-        assert response.status_code in [200], response.status_code
+        logging.debug("status: %s", response)
+        assert response.status_code == 200, response.status_code
         return response
 
-    def path(self, sub):
-        return os.path.join(self.outdir, sub)
+    def write_file(self, content, name):
+        file_path = os.path.join(self.output_dir, name)
+        dir_path = os.path.dirname(file_path)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        with open(file_path, "wb") as f:
+            f.write(content)
 
-    def delete_downloaded(self):
-        shutil.rmtree(self.outdir)
+    def resolve_path(self, sub):
+        return os.path.join(self.output_dir, sub)
 
-    def delete_css(self):
-        for root, _, files in os.walk(self.outdir, topdown=False):
-            for name in files:
-                if name.lower().endswith(".css"):
-                    with open(os.path.join(root, name), "w", encoding="UTF-8") as f:
-                        f.write("")
-                        f.close()
-
-    def make_epub(self):
-        assert os.path.exists(self.outdir), self.outdir
-        epubfpath = self.outdir + ".epub"
-        with zipfile.ZipFile(epubfpath, "w", zipfile.ZIP_DEFLATED) as zipf:
-            zipdir(self.outdir, zipf)
-            zipf.close()
-        logging.info("ebook saved as %s", epubfpath)
+    def build_epub(self):
+        assert os.path.exists(self.output_dir), self.output_dir
+        epub_path = self.output_dir + ".epub"
+        with zipfile.ZipFile(epub_path, "w", zipfile.ZIP_DEFLATED) as archive:
+            self._archive_directory(self.output_dir, archive)
+        logging.info("ebook saved as %s", epub_path)
         logging.info(
             "We recommend https://calibre-ebook.com/ for book management and conversion"
         )
 
+    def clear_styles(self):
+        for root, _, files in os.walk(self.output_dir, topdown=False):
+            for name in files:
+                if name.lower().endswith(".css"):
+                    with open(os.path.join(root, name), "w", encoding="UTF-8") as f:
+                        f.write("")
 
-class BookDownloader:
-    def __init__(self, bookid, downloader, secret=None):
-        self.bookid = bookid
-        self.downloader = downloader
-        self.secret = self.download_secret() if secret is None else secret
-        assert self.secret is not None
+    def cleanup(self):
+        shutil.rmtree(self.output_dir)
 
-    def download_secret(self):
-        url = f"https://{BOOKS_DOMAIN}/reader/p/api/v5/metadata_secret?lang=ru"
-        secret_json = self.downloader.request_url(url).json()
-        logging.debug("secret response: %s", str(secret_json))
-        secret = secret_json["secret"]
-        logging.debug("secret: %s", secret)
-        return secret
 
-    def download(self):
-        encrypted_metadata = self.download_metadata(self.bookid)
-        metadata = self.decrypt_metadata(encrypted_metadata, self.secret)
-        self.process_metadata(metadata)
+class BookProcessor:
+    def __init__(self, book_id, file_manager, encryption_key=None):
+        self.book_id = book_id
+        self.file_manager = file_manager
+        self.encryption_key = (
+            self.fetch_secret() if encryption_key is None else encryption_key
+        )
+        assert self.encryption_key is not None
 
-    def download_metadata(self, bookid):
-        logging.debug("download_metadata(%s)", bookid)
-        url = f"https://{BOOKS_DOMAIN}/p/api/v5/books/{bookid}/metadata/v4"
-        metadata_response = self.downloader.request_url(url)
-        logging.debug("metadata_response:%s ...", metadata_response.text[:40])
-        return metadata_response.json()
+    def fetch_secret(self):
+        url = f"https://{SERVICE_DOMAIN}/reader/p/api/v5/metadata_secret?lang=ru"
+        secret_response = self.file_manager.fetch_url(url).json()
+        logging.debug("secret payload: %s", str(secret_response))
+        key_value = secret_response["secret"]
+        logging.debug("key: %s", key_value)
+        return key_value
 
-    def decrypt_metadata(self, encrypted_metadata, secret):
-        assert type(encrypted_metadata) in [dict]
-        metadata = {}
-        for key, val in encrypted_metadata.items():
-            if type(val) in [list]:
-                metadata[key] = self.decrypt(secret, bytess(val))
+    def run(self):
+        payload = self.fetch_metadata(self.book_id)
+        manifest = self.decipher_metadata(payload, self.encryption_key)
+        self.handle_metadata(manifest)
+
+    def fetch_metadata(self, identifier):
+        logging.debug("requesting metadata for %s", identifier)
+        url = f"https://{SERVICE_DOMAIN}/p/api/v5/books/{identifier}/metadata/v4"
+        response = self.file_manager.fetch_url(url)
+        logging.debug("metadata chunk: %s ...", response.text[:40])
+        return response.json()
+
+    def decipher_metadata(self, payload, encryption_key):
+        assert isinstance(payload, dict)
+        manifest = {}
+        for key, val in payload.items():
+            if isinstance(val, list):
+                manifest[key] = self.decipher(
+                    encryption_key, FileManager._list_to_bytes(val)
+                )
             else:
-                metadata[key] = val
-        return metadata
+                manifest[key] = val
+        return manifest
 
-    def decrypt(self, secret, data):
-        assert type(secret) in [str], type(secret)
-        key = base64.b64decode(secret)
-        bts = self.rawDecryptBytes(data[16:], key, data[:16])
-        logging.debug("len(bts):%s", len(bts))
-        logging.debug("lastbyte:%s", bts[-1])
-        padsize = -1 * bts[-1]
-        return bts[:padsize]
+    def decipher(self, encryption_key, data):
+        assert isinstance(encryption_key, str), type(encryption_key)
+        decoded = base64.b64decode(encryption_key)
+        plaintext = self.aes_decrypt(data[16:], decoded, data[:16])
+        logging.debug("plain length: %s", len(plaintext))
+        logging.debug("last byte: %s", plaintext[-1])
+        pad_length = -1 * plaintext[-1]
+        return plaintext[:pad_length]
 
-    def rawDecryptBytes(self, cryptArr, key, iv):
-        assert type(cryptArr) in [bytes]
-        assert type(key) in [bytes]
-        assert type(iv) in [bytes]
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        return cipher.decrypt(cryptArr)
+    def aes_decrypt(self, ciphertext, decoded_key, iv):
+        assert isinstance(ciphertext, bytes)
+        assert isinstance(decoded_key, bytes)
+        assert isinstance(iv, bytes)
+        cipher = AES.new(decoded_key, AES.MODE_CBC, iv=iv)
+        return cipher.decrypt(ciphertext)
 
-    def process_metadata(self, metadata):
-        self.downloader.save_bytes(b"application/epub+zip", "mimetype")
-        self.downloader.save_bytes(metadata["container"], "META-INF/container.xml")  # noqa: E501
-        self.downloader.save_bytes(metadata["opf"], "OEBPS/content.opf")
-        self.process_opf(metadata["document_uuid"])
-        self.downloader.save_bytes(metadata["ncx"], "OEBPS/toc.ncx")
+    def handle_metadata(self, manifest):
+        self.file_manager.write_file(b"application/epub+zip", "mimetype")
+        self.file_manager.write_file(manifest["container"], "META-INF/container.xml")
+        self.file_manager.write_file(manifest["opf"], "OEBPS/content.opf")
+        self.parse_opf(manifest["document_uuid"])
+        self.file_manager.write_file(manifest["ncx"], "OEBPS/toc.ncx")
 
-    def process_opf(self, uuid):
-        content_file = self.downloader.path("OEBPS/content.opf")
-        for event, elem in ET.iterparse(content_file, events=["start"]):
+    def parse_opf(self, document_id):
+        opf_path = self.file_manager.resolve_path("OEBPS/content.opf")
+        for event, elem in ET.iterparse(opf_path, events=["start"]):
             if event != "start":
                 continue
             if not elem.tag.endswith("}item"):
                 continue
             if "href" not in elem.attrib:
                 continue
-            fname = elem.attrib["href"]
-            if fname == "toc.ncx":
+            file_name = elem.attrib["href"]
+            if file_name == "toc.ncx":
                 continue
-            logging.debug("fname:%s", fname)
-            url = f"https://{BOOKS_DOMAIN}/p/a/4/d/{uuid}/contents/OEBPS/{fname}"
+            logging.debug("resource: %s", file_name)
+            url = f"https://{SERVICE_DOMAIN}/p/a/4/d/{document_id}/contents/OEBPS/{file_name}"
             try:
-                response = self.downloader.request_url(url)
-                self.downloader.save_bytes(response.content, "OEBPS/" + fname)
+                response = self.file_manager.fetch_url(url)
+                self.file_manager.write_file(response.content, "OEBPS/" + file_name)
             except Exception:
-                logging.warning("cannot download from '%s'", url)
+                logging.warning("failed to fetch '%s'", url)
 
-    def delete_downloaded(self):
-        self.downloader.delete_downloaded()
+    def cleanup(self):
+        self.file_manager.cleanup()
 
-    def make_epub(self):
-        self.downloader.make_epub()
+    def build_epub(self):
+        self.file_manager.build_epub()
 
-    def delete_css(self):
-        self.downloader.delete_css()
+    def clear_styles(self):
+        self.file_manager.clear_styles()
 
 
-class YandexBook:
-    def __init__(self, outdir, cookies):
-        assert os.path.exists(outdir), "path %s does not exist" % outdir
-        self.outdir = outdir
+class BookClient:
+    def __init__(self, output_dir, cookies):
+        assert os.path.exists(output_dir), f"path {output_dir} does not exist"
+        self.output_dir = output_dir
         assert cookies
         self.cookies = cookies
 
-    def get_book(self, bookid):
-        downloader = Downloader(outdir=self.outdir, cookies=self.cookies)
-        return BookDownloader(bookid=bookid, downloader=downloader)
+    def get_book(self, book_id):
+        path = os.path.join(self.output_dir, book_id)
+        file_manager = FileManager(output_dir=path, cookies=self.cookies)
+        return BookProcessor(book_id=book_id, file_manager=file_manager)
