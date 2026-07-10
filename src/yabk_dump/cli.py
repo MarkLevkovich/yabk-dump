@@ -1,6 +1,6 @@
-import logging
 import os
-import pathlib
+import logging
+from pathlib import Path
 from yabk_dump.core import BookClient, SERVICE_DOMAIN
 import questionary
 from colorama import Fore, Style, init
@@ -72,7 +72,7 @@ def run():
             "Output directory\n(Press Enter for default: ~/Downloads/yandex_books)"
         ).ask()
         if not outdir:
-            outdir = str(pathlib.Path.home() / "Downloads" / "yandex_books")
+            outdir = str(Path.home() / "Downloads" / "yandex_books")
 
         download = questionary.select(
             "Download book content?",
@@ -95,8 +95,7 @@ def run():
         ).ask()
         print("\n")
 
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
+        Path(outdir).mkdir(parents=True, exist_ok=True)
 
         client = BookClient(output_dir=outdir, cookies=get_cookies())
         book = client.get_book(book_id=bookid)
