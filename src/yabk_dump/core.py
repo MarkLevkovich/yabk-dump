@@ -14,18 +14,95 @@ logger = logging.getLogger(__name__)
 SERVICE_DOMAIN = "books.yandex.ru"
 
 
-def _to_bytes(values: list[int]) -> bytes:
-    return bytes(values)
+class UnauthorizedError(Exception):
+    pass
+
+
+class AESDecryptor:
+    def __init__(self, key: bytes) -> None:
+        self._key = key
+
+    @classmethod
+    def from_base64(cls, encoded: str) -> "AESDecryptor":
+        return cls(base64.b64decode(encoded))
+
+    def decrypt(self, data: bytes) -> bytes:
+        iv, ciphertext = data[:16], data[16:]
+        plaintext = AES.new(self._key, AES.MODE_CBC, iv=iv).decrypt(ciphertext)
+        return plaintext[: -plaintext[-1]]
+
+    def decrypt_manifest(self, payload: dict) -> dict:
+        result = {}
+        for key, val in payload.items():
+            if isinstance(val, list):
+                result[key] = self.decrypt(bytes(val))
+            else:
+                result[key] = val
+        return result
+
+
+class YandexBooksAPI:
+    def __init__(self, cookies: dict[str, str]) -> None:
+        self._cookies = cookies
+
+    def fetch_json(self, url: str) -> dict:
+        logger.debug("fetching %s", url)
+        response = httpx.get(url, cookies=self._cookies, timeout=30)
+        self._raise_if_unauthorized(response)
+        response.raise_for_status()
+        return response.json()
+
+    def fetch_bytes(self, url: str) -> bytes:
+        logger.debug("fetching %s", url)
+        response = httpx.get(url, cookies=self._cookies, timeout=30)
+        self._raise_if_unauthorized(response)
+        response.raise_for_status()
+        return response.content
+
+    @staticmethod
+    def _raise_if_unauthorized(response: httpx.Response) -> None:
+        if response.status_code == 401:
+            raise UnauthorizedError(
+                "Session_id cookie is invalid or expired. "
+                "Please refresh it in your browser and try again."
+            )
 
 
 class FileManager:
-    def __init__(self, output_dir: str, cookies: dict[str, str]) -> None:
+    def __init__(self, output_dir: str) -> None:
         self._output = Path(output_dir)
-        self._cookies = cookies
+
+    @property
+    def output_dir(self) -> Path:
+        return self._output
+
+    def write_file(self, content: bytes, name: str) -> None:
+        path = self._output / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+
+    def resolve_path(self, sub: str) -> str:
+        return str(self._output / sub)
+
+    def clear_styles(self) -> None:
+        for css_file in self._output.rglob("*.css"):
+            css_file.write_text("", encoding="utf-8")
+
+    def cleanup(self) -> None:
+        shutil.rmtree(str(self._output))
+
+
+class EpubBuilder:
+    @staticmethod
+    def build(source_dir: str) -> str:
+        source = Path(source_dir)
+        epub_path = f"{source}.epub"
+        with zipfile.ZipFile(epub_path, "w", zipfile.ZIP_DEFLATED) as archive:
+            EpubBuilder._pack_directory(source, archive)
+        return epub_path
 
     @staticmethod
-    def _pack_directory(directory: str, archive: zipfile.ZipFile) -> None:
-        base = Path(directory)
+    def _pack_directory(base: Path, archive: zipfile.ZipFile) -> None:
         mimetype_path = base / "mimetype"
         if mimetype_path.is_file():
             archive.write(
@@ -42,84 +119,43 @@ class FileManager:
                 compress_type=zipfile.ZIP_DEFLATED,
             )
 
-    def fetch_url(self, url: str) -> httpx.Response:
-        logger.debug("fetching %s", url)
-        response = httpx.get(url, cookies=self._cookies, timeout=30)
-        response.raise_for_status()
-        return response
-
-    def write_file(self, content: bytes, name: str) -> None:
-        path = self._output / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(content)
-
-    def resolve_path(self, sub: str) -> str:
-        return str(self._output / sub)
-
-    def build_epub(self) -> None:
-        epub_path = f"{self._output}.epub"
-        with zipfile.ZipFile(epub_path, "w", zipfile.ZIP_DEFLATED) as archive:
-            self._pack_directory(str(self._output), archive)
-        logger.info("ebook saved as %s", epub_path)
-        logger.info(
-            "We recommend https://calibre-ebook.com/ for book management and conversion"
-        )
-
-    def clear_styles(self) -> None:
-        for css_file in self._output.rglob("*.css"):
-            css_file.write_text("", encoding="utf-8")
-
-    def cleanup(self) -> None:
-        shutil.rmtree(str(self._output))
-
 
 class BookProcessor:
     def __init__(
         self,
         book_id: str,
+        api: YandexBooksAPI,
         file_manager: FileManager,
         encryption_key: Optional[str] = None,
     ) -> None:
         self._book_id = book_id
+        self._api = api
         self._fm = file_manager
-        self._key = (
-            encryption_key if encryption_key is not None else self._fetch_secret()
+        self._decryptor: Optional[AESDecryptor] = (
+            AESDecryptor.from_base64(encryption_key)
+            if encryption_key is not None
+            else None
         )
 
-    def _fetch_secret(self) -> str:
-        url = f"https://{SERVICE_DOMAIN}/reader/p/api/v5/metadata_secret?lang=ru"
-        payload = self._fm.fetch_url(url).json()
-        logger.debug("secret payload: %s", str(payload))
-        key = payload["secret"]
-        logger.debug("key: %s", key)
-        return key
+    def _ensure_decryptor(self) -> AESDecryptor:
+        if self._decryptor is None:
+            url = f"https://{SERVICE_DOMAIN}/reader/p/api/v5/metadata_secret?lang=ru"
+            payload = self._api.fetch_json(url)
+            self._decryptor = AESDecryptor.from_base64(payload["secret"])
+            logger.debug("decryptor initialized from remote secret")
+        return self._decryptor
 
     def run(self) -> None:
         payload = self._fetch_metadata()
-        manifest = self._decrypt_manifest(payload)
+        manifest = self._ensure_decryptor().decrypt_manifest(payload)
         self._write_manifest(manifest)
 
     def _fetch_metadata(self) -> dict:
         logger.debug("requesting metadata for %s", self._book_id)
         url = f"https://{SERVICE_DOMAIN}/p/api/v5/books/{self._book_id}/metadata/v4"
-        response = self._fm.fetch_url(url)
-        logger.debug("metadata chunk: %s ...", response.text[:40])
-        return response.json()
-
-    def _decrypt_manifest(self, payload: dict) -> dict:
-        result = {}
-        for key, val in payload.items():
-            if isinstance(val, list):
-                result[key] = self._decrypt(_to_bytes(val))
-            else:
-                result[key] = val
-        return result
-
-    def _decrypt(self, data: bytes) -> bytes:
-        raw_key = base64.b64decode(self._key)
-        iv, ciphertext = data[:16], data[16:]
-        plaintext = AES.new(raw_key, AES.MODE_CBC, iv=iv).decrypt(ciphertext)
-        return plaintext[: -plaintext[-1]]
+        meta = self._api.fetch_json(url)
+        logger.debug("metadata received for %s", self._book_id)
+        return meta
 
     def _write_manifest(self, manifest: dict) -> None:
         self._fm.write_file(b"application/epub+zip", "mimetype")
@@ -141,8 +177,8 @@ class BookProcessor:
                 f"/contents/OEBPS/{file_name}"
             )
             try:
-                response = self._fm.fetch_url(url)
-                self._fm.write_file(response.content, f"OEBPS/{file_name}")
+                content = self._api.fetch_bytes(url)
+                self._fm.write_file(content, f"OEBPS/{file_name}")
             except httpx.RequestException:
                 logger.warning("failed to fetch '%s'", url)
 
@@ -150,7 +186,11 @@ class BookProcessor:
         self._fm.cleanup()
 
     def build_epub(self) -> None:
-        self._fm.build_epub()
+        epub_path = EpubBuilder.build(str(self._fm.output_dir))
+        logger.info("ebook saved as %s", epub_path)
+        logger.info(
+            "We recommend https://calibre-ebook.com/ for book management and conversion"
+        )
 
     def clear_styles(self) -> None:
         self._fm.clear_styles()
@@ -167,5 +207,6 @@ class BookClient:
 
     def get_book(self, book_id: str) -> BookProcessor:
         book_dir = str(self._output / book_id)
-        fm = FileManager(book_dir, self._cookies)
-        return BookProcessor(book_id=book_id, file_manager=fm)
+        api = YandexBooksAPI(self._cookies)
+        fm = FileManager(book_dir)
+        return BookProcessor(book_id=book_id, api=api, file_manager=fm)

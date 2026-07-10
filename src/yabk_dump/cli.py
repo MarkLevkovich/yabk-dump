@@ -1,7 +1,7 @@
 import os
 import logging
 from pathlib import Path
-from yabk_dump.core import BookClient, SERVICE_DOMAIN
+from yabk_dump.core import BookClient, SERVICE_DOMAIN, UnauthorizedError
 import questionary
 from colorama import Fore, Style, init
 
@@ -117,6 +117,13 @@ def run():
         logger.info(text)
     except KeyboardInterrupt:
         print("Cancelled.")
+    except UnauthorizedError:
+        logger.error(
+            "Session_id cookie is invalid or expired.\n"
+            "Please refresh it in your browser (DevTools → Application → Cookies → %s)\n"
+            "or set the SESSION_ID environment variable.",
+            f"https://{SERVICE_DOMAIN}",
+        )
     except Exception:
         logger.exception("Unhandled error")
         print("Oops... An error occurred")

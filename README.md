@@ -1,10 +1,12 @@
+> **yabk-dump** is a significantly enhanced fork of [yandex_books_downloader](https://github.com/alex123012/yandex_books_downloader) by alex123012 — rewritten with an interactive CLI, modern architecture, proper error handling, and uv-based packaging.
+
 <div align="center">
 
 ```
                 __    __             __                    
    __  ______ _/ /_  / /__      ____/ /_  ______ ___  ____ 
   / / / / __ `/ __ \/ //_/_____/ __  / / / / __ `__ \/ __ \
- / /_/ / /_/ / /_/ / ,< /_____/ /_/ / /_/ / / / / / / /_/ /
+ / /_/ / /_/ / /_/ / ,< /_____/ /_/ / /_/ / / / / / / / /_/ /
  \__, /\__,_/_.___/_/|_|      \__,_/\__,_/_/ /_/ /_/ .___/ 
 /____/                                            /_/      
 ```
