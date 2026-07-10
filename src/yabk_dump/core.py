@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 from xml.etree import ElementTree as ET
-import requests
+import httpx
 from Crypto.Cipher import AES
 
 
@@ -42,9 +42,9 @@ class FileManager:
                 compress_type=zipfile.ZIP_DEFLATED,
             )
 
-    def fetch_url(self, url: str) -> requests.Response:
+    def fetch_url(self, url: str) -> httpx.Response:
         logger.debug("fetching %s", url)
-        response = requests.get(url, cookies=self._cookies, timeout=30)
+        response = httpx.get(url, cookies=self._cookies, timeout=30)
         response.raise_for_status()
         return response
 
@@ -143,7 +143,7 @@ class BookProcessor:
             try:
                 response = self._fm.fetch_url(url)
                 self._fm.write_file(response.content, f"OEBPS/{file_name}")
-            except requests.RequestException:
+            except httpx.RequestException:
                 logger.warning("failed to fetch '%s'", url)
 
     def cleanup(self) -> None:

@@ -14,7 +14,7 @@ class ColoramaFormatter(logging.Formatter):
         return super().format(record)
 
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 formatter = ColoramaFormatter("%(levelname)s %(message)s")
 handler.setFormatter(formatter)
