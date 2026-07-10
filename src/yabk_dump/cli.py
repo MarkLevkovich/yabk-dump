@@ -3,9 +3,24 @@ import os
 import pathlib
 from yabk_dump.core import YandexBook, BOOKS_DOMAIN
 import questionary
+from colorama import Fore, Style, init
 
-logformat = "%(asctime)s (%(name)s) %(levelname)s %(module)s.%(funcName)s():%(lineno)d  %(message)s"
-logging.basicConfig(level="INFO", format=logformat)
+init(autoreset=True)
+
+
+class ColoramaFormatter(logging.Formatter):
+    def format(self, record):
+        record.levelname = f"{Fore.BLUE}{record.levelname}{Style.RESET_ALL}"
+        return super().format(record)
+
+
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+formatter = ColoramaFormatter("%(levelname)s %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
 
 ascii_logo = r"""
                 __    __             __
@@ -78,6 +93,7 @@ def run():
             "Delete source files after packaging?",
             choices=["Yes", "No"],
         ).ask()
+        print("\n")
 
         if not os.path.exists(outdir):
             os.makedirs(outdir)
@@ -92,10 +108,18 @@ def run():
             book.make_epub()
         if del_downloaded == "Yes":
             book.delete_downloaded()
+        text = f"""
+    Book successfully downloaded!
+    Source files are saved in: {outdir}
+    
+    For conversion to other formats and uploading to your ebook reader,
+    we recommend Calibre — https://calibre-ebook.com/
+        """
+        logger.info(text)
     except KeyboardInterrupt:
         print("Cancelled.")
     except Exception:
-        logging.exception("Unhandled error")
+        logger.exception("Unhandled error")
         print("Oops... An error occurred")
 
 
