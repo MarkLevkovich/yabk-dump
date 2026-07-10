@@ -8,12 +8,12 @@ logformat = "%(asctime)s (%(name)s) %(levelname)s %(module)s.%(funcName)s():%(li
 logging.basicConfig(level="INFO", format=logformat)
 
 ascii_logo = r"""
-                __    __             __                    
-   __  ______ _/ /_  / /__      ____/ /_  ______ ___  ____ 
+                __    __             __
+   __  ______ _/ /_  / /__      ____/ /_  ______ ___  ____
   / / / / __ `/ __ \/ //_/_____/ __  / / / / __ `__ \/ __ \
  / /_/ / /_/ / /_/ / ,< /_____/ /_/ / /_/ / / / / / / /_/ /
- \__, /\__,_/_.___/_/|_|      \__,_/\__,_/_/ /_/ /_/ .___/ 
-/____/                                            /_/      
+ \__, /\__,_/_.___/_/|_|      \__,_/\__,_/_/ /_/ /_/ .___/
+/____/                                            /_/
 """
 
 
@@ -36,13 +36,22 @@ def get_cookies():
     return {auth_cookie_name: session_id}
 
 
+def get_id_from_url(url: str) -> str:
+    if not url:
+        return None
+    url = url.rstrip("/")
+    parts = url.split("/")
+    return parts[-1]
+
+
 def run():
     try:
         print(ascii_logo)
-        bookid = questionary.text(
-            "Book ID\n"
-            "(from the book page URL, e.g. https://books.yandex.ru/book/KFHDG3bp/ -> KFHDG3bp)"
+        bookurl = questionary.text(
+            "Book URL\n(e.g. https://books.yandex.ru/book/KFHDG3bp/)"
         ).ask()
+
+        bookid = get_id_from_url(bookurl)
 
         outdir = questionary.text(
             "Output directory\n(Press Enter for default: ~/Downloads/yandex_books)"
