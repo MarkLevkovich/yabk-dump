@@ -64,6 +64,7 @@ def get_id_from_url(url: str) -> str:
 
 
 def run():
+    os.system("cls" if os.name == "nt" else "clear")
     try:
         print(ascii_logo)
         action = questionary.select(

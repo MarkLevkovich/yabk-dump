@@ -1,8 +1,7 @@
-> **yabk-dump** is a significantly enhanced fork of [bookmate_downloader](https://github.com/ilyakharlamov/bookmate_downloader) by ilyakharlamov — rewritten for YandexBooks with an interactive CLI, modern architecture, proper error handling, and uv-based packaging.
-
 <div align="center">
 
 ```
+
                 __    __             __                    
    __  ______ _/ /_  / /__      ____/ /_  ______ ___  ____ 
   / / / / __ `/ __ \/ //_/_____/ __  / / / / __ `__ \/ __ \
@@ -13,9 +12,7 @@
 
 </div>
 
-Save books from [books.yandex.ru](https://books.yandex.ru) as EPUB files you can keep offline, transfer to an e-reader, or archive.
-
-Requires a **Yandex Plus** subscription unless the book is available for free.
+Look up info or download books from [books.yandex.ru](https://books.yandex.ru) — no account needed for metadata, Yandex Plus to download.
 
 Compatible with macOS and Linux. On Windows, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
 
@@ -30,18 +27,24 @@ Python 3.12 or newer and [uv](https://docs.astral.sh/uv/) are required.
 
 ## What happens when you run it
 
-The tool asks you a few questions and takes care of the rest:
+You get a menu with two options:
 
-1. **Paste the book URL** from your browser — the ID is extracted automatically.
-2. **Session ID** — fetched from Chrome via `pycookiecheat` if available. Otherwise you can paste it manually or set the `SESSION_ID` env variable.
+### Download book
+
+The tool walks you through the usual steps:
+
+1. **Paste the book URL** — the ID is extracted automatically.
+2. **Session ID** — grabbed from Chrome via `pycookiecheat` if available. Falls back to manual paste or `SESSION_ID` env variable.
 3. **Output folder** — defaults to `~/Downloads/yandex_books`.
-4. **Processing options**:
-   - Download the book content
-   - Strip inline CSS (recommended for cleaner output)
-   - Package everything into a valid `.epub`
-   - Delete the raw source files after packaging
+4. **Processing options** — download, strip CSS, pack into `.epub`, and optionally delete the source files after.
 
-The resulting EPUB appears next to the output directory (e.g. `~/Downloads/yandex_books.epub`).
+Result lands next to the output directory (e.g. `~/Downloads/yandex_books.epub`).
+
+### About book
+
+No auth needed. Paste a book URL and the tool fetches its metadata:
+
+title, authors, translators, language, publication date, annotation, editor's notes, reader and bookshelf counts — straight from the Yandex public API. Handy for a quick look without downloading anything.
 
 ## Manual session ID
 
@@ -74,3 +77,5 @@ Yandex books embed inline styles that some EPUB readers render poorly. Clearing 
 ## Related
 
 - [Calibre](https://calibre-ebook.com/) — cross-platform ebook management and format conversion
+
+Inspired by [bookmate_downloader](https://github.com/ilyakharlamov/bookmate_downloader).
