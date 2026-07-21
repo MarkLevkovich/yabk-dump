@@ -7,6 +7,7 @@ from typing import Optional
 from xml.etree import ElementTree as ET
 import httpx
 from Crypto.Cipher import AES
+from tqdm import tqdm
 
 
 logger = logging.getLogger(__name__)
@@ -166,12 +167,15 @@ class BookProcessor:
 
     def _download_resources(self, document_id: str) -> None:
         opf_path = self._fm.resolve_path("OEBPS/content.opf")
+        items = []
         for _event, elem in ET.iterparse(opf_path, events=["start"]):
             if not (elem.tag.endswith("}item") and "href" in elem.attrib):
                 continue
             file_name = elem.attrib["href"]
             if file_name == "toc.ncx":
                 continue
+            items.append(file_name)
+        for file_name in tqdm(items, desc="Downloading", unit="file"):
             url = (
                 f"https://{SERVICE_DOMAIN}/p/a/4/d/{document_id}"
                 f"/contents/OEBPS/{file_name}"
