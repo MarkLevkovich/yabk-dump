@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from pathlib import Path
 
 import questionary
@@ -67,15 +68,30 @@ def run():
     os.system("cls" if os.name == "nt" else "clear")
     try:
         print(ascii_logo)
-        action = questionary.select(
-            "Select action:",
-            choices=["Download book", "About book"],
+        bookurl = questionary.text(
+            "Book URL\n(e.g. https://books.yandex.ru/book/KFHDG3bp/)"
         ).ask()
-        if action == "Download book":
-            bookurl = questionary.text(
-                "Book URL\n(e.g. https://books.yandex.ru/book/KFHDG3bp/)"
-            ).ask()
 
+        bookid = get_id_from_url(bookurl)
+        ya_client = YandexBookClient()
+        book_data = get_book_info(ya_client, bookid)
+        print(
+            f"\nTitle: {book_data.title}\n"
+            f"UUID: {book_data.uuid}\n"
+            f"Author(s): {book_data.authors}\n"
+            f"Translator(s): {book_data.translators}\n"
+            f"Language: {book_data.lang}\n"
+            f"Year: {book_data.publication_date}\n"
+            f"About: {book_data.about}\n"
+            f"Editor's note: {book_data.editor_annotation}\n"
+            f"Readers: {book_data.readers_count}\n"
+            f"Bookshelves: {book_data.bookshelves_count}\n"
+        )
+        download_q = questionary.select(
+            "Download this book ?",
+            choices=["yes", "no"],
+        ).ask()
+        if download_q == "yes":
             bookid = get_id_from_url(bookurl)
 
             outdir = questionary.text(
@@ -126,25 +142,8 @@ def run():
             """
             logger.info(text)
         else:
-            bookurl = questionary.text(
-                "Book URL\n(e.g. https://books.yandex.ru/book/KFHDG3bp/)"
-            ).ask()
-
-            bookid = get_id_from_url(bookurl)
-            ya_client = YandexBookClient()
-            book_data = get_book_info(ya_client, bookid)
-            print(
-                f"\nTitle: {book_data.title}\n"
-                f"UUID: {book_data.uuid}\n"
-                f"Author(s): {book_data.authors}\n"
-                f"Translator(s): {book_data.translators}\n"
-                f"Language: {book_data.lang}\n"
-                f"Year: {book_data.publication_date}\n"
-                f"About: {book_data.about}\n"
-                f"Editor's note: {book_data.editor_annotation}\n"
-                f"Readers: {book_data.readers_count}\n"
-                f"Bookshelves: {book_data.bookshelves_count}"
-            )
+            print("Shutdown...")
+            sys.exit()
     except KeyboardInterrupt:
         print("Cancelled.")
     except UnauthorizedError:
