@@ -27,24 +27,17 @@ Python 3.12 or newer and [uv](https://docs.astral.sh/uv/) are required.
 
 ## What happens when you run it
 
-You get a menu with two options:
+You paste a book URL and the tool shows you the metadata right away:
 
-### Download book
+title, authors, translators, language, publication date, annotation, editor's notes, reader and bookshelf counts — straight from the Yandex public API. No auth needed for this.
 
-The tool walks you through the usual steps:
+Then it asks if you'd like to download the book. If you say yes:
 
-1. **Paste the book URL** — the ID is extracted automatically.
-2. **Session ID** — grabbed from Chrome via `pycookiecheat` if available. Falls back to manual paste or `SESSION_ID` env variable.
-3. **Output folder** — defaults to `~/Downloads/yandex_books`.
-4. **Processing options** — download, strip CSS, pack into `.epub`, and optionally delete the source files after.
+1. **Session ID** — grabbed from Chrome via `pycookiecheat` if available. Falls back to manual paste or `SESSION_ID` env variable.
+2. **Output folder** — defaults to `~/Downloads/yandex_books`.
+3. **Processing options** — download, strip CSS, pack into `.epub`, and optionally delete the source files after.
 
 Result lands next to the output directory (e.g. `~/Downloads/yandex_books.epub`).
-
-### About book
-
-No auth needed. Paste a book URL and the tool fetches its metadata:
-
-title, authors, translators, language, publication date, annotation, editor's notes, reader and bookshelf counts — straight from the Yandex public API. Handy for a quick look without downloading anything.
 
 ## Manual session ID
 
