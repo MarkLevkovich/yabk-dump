@@ -9,6 +9,7 @@ from yandex_book import YandexBookClient
 
 from yabk_dump.about import get_book_info
 from yabk_dump.core import SERVICE_DOMAIN, BookClient, UnauthorizedError
+from yabk_dump.search import search_book
 
 init(autoreset=True)
 
@@ -64,11 +65,10 @@ def get_id_from_url(url: str) -> str:
     return parts[-1]
 
 
-def main(bookurl: str) -> None:
+def main(bookurl: str, client: YandexBookClient) -> None:
 
     bookid = get_id_from_url(bookurl)
-    ya_client = YandexBookClient()
-    book_data = get_book_info(ya_client, bookid)
+    book_data = get_book_info(client, bookid)
     print(
         f"\nTitle: {book_data.title}\n"
         f"UUID: {book_data.uuid}\n"
@@ -141,6 +141,7 @@ def run():
     os.system("cls" if os.name == "nt" else "clear")
     try:
         print(ascii_logo)
+        ya_client = YandexBookClient()
         action = questionary.select(
             "Select action:",
             choices=["Download", "Search"],
@@ -149,9 +150,10 @@ def run():
             bookurl = questionary.text(
                 "Book URL\n(e.g. https://books.yandex.ru/book/KFHDG3bp/)"
             ).ask()
-            main(bookurl)
+            main(bookurl, ya_client)
         elif action == "Search":
-            pass
+            s_query = questionary.text("Search by title").ask()
+            data = search_book(s_query, ya_client)
         else:
             print("Shutdown...")
             sys.exit()
