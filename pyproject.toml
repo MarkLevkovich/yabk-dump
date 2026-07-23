@@ -1,6 +1,6 @@
 [project]
 name = "yabk-dump"
-version = "0.3.1"
+version = "0.4.0"
 description = "Download and convert books from Yandex Books"
 
 requires-python = ">=3.12"
