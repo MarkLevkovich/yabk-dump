@@ -138,7 +138,7 @@ def main(bookurl: str, client: YandexBookClient) -> None:
 
 
 def run():
-    os.system("cls" if os.name == "nt" else "clear")
+    print("\033[H\033[J", end="")
     try:
         print(ascii_logo)
         ya_client = YandexBookClient()
