@@ -82,7 +82,7 @@ def main(bookurl: str, client: YandexBookClient) -> None:
         f"Bookshelves: {book_data.bookshelves_count}\n"
     )
     download_q = questionary.select(
-        "Download this book ?",
+        "Download this book?",
         choices=["yes", "no"],
     ).ask()
     if download_q == "yes":
@@ -152,7 +152,7 @@ def run():
             ).ask()
             main(bookurl, ya_client)
         elif action == "Search":
-            s_query = questionary.text("Search by title").ask()
+            s_query = questionary.text("Search by title:").ask()
             data = search_book(s_query, ya_client)
             items = list(data.items())
             for index, (title, vals) in enumerate(data.items()):
@@ -161,7 +161,7 @@ def run():
             main(f"books.yandex.ru/{items[select_book][1]['id']}", ya_client)
 
         else:
-            print("Unknown action, shutdown...")
+            print("Unknown action, shutting down...")
             sys.exit()
 
     except KeyboardInterrupt:
