@@ -27,7 +27,11 @@ Python 3.12 or newer and [uv](https://docs.astral.sh/uv/) are required.
 
 ## What happens when you run it
 
-You paste a book URL and the tool shows you the metadata right away:
+You're greeted with a menu of two actions:
+
+### Download
+
+Paste a book URL and the tool shows you the metadata right away:
 
 title, authors, translators, language, publication date, annotation, editor's notes, reader and bookshelf counts — straight from the Yandex public API. No auth needed for this.
 
@@ -38,6 +42,10 @@ Then it asks if you'd like to download the book. If you say yes:
 3. **Processing options** — download, strip CSS, pack into `.epub`, and optionally delete the source files after.
 
 Result lands next to the output directory (e.g. `~/Downloads/yandex_books.epub`).
+
+### Search
+
+Search books by title without a URL. Results show index, title, and author. Pick one and the flow continues into the same download pipeline as above.
 
 ## Manual session ID
 
