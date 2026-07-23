@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-
+from urllib.parse import urlparse
 import questionary
 from colorama import Fore, Style, init
 from yandex_book import YandexBookClient
@@ -57,12 +57,10 @@ def get_cookies():
     return {auth_cookie_name: session_id}
 
 
-def get_id_from_url(url: str) -> str:
+def get_id_from_url(url: str) -> str | None:
     if not url:
         return None
-    url = url.rstrip("/")
-    parts = url.split("/")
-    return parts[-1]
+    return urlparse(url).path.rstrip("/").split("/")[-1] or None
 
 
 def main(bookurl: str, client: YandexBookClient) -> None:
