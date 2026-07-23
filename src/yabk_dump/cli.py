@@ -154,8 +154,14 @@ def run():
         elif action == "Search":
             s_query = questionary.text("Search by title").ask()
             data = search_book(s_query, ya_client)
+            items = list(data.items())
+            for index, (title, vals) in enumerate(data.items()):
+                print(f"{index} --- title: {title} --- author: {vals['author']}")
+            select_book = int(input("Enter number: "))
+            main(f"books.yandex.ru/{items[select_book][1]['id']}", ya_client)
+
         else:
-            print("Shutdown...")
+            print("Unknown action, shutdown...")
             sys.exit()
 
     except KeyboardInterrupt:

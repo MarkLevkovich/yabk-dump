@@ -9,12 +9,15 @@ def search_book(query: str, yclient: YandexBookClient):
         return res
 
     for item in results["data"]["search"]["page"]:
-        book = item.get("book", "Unknown")
+        book = item.get("book")
         if not book:
             continue
 
         title = book.get("name")
         if not title:
+            continue
+        book_id = book.get("uuid")
+        if not book_id:
             continue
 
         authors = book.get("authors", [])
@@ -22,5 +25,5 @@ def search_book(query: str, yclient: YandexBookClient):
             author = authors[0].get("name", "Unknown")
         else:
             author = "Unknown"
-        res[title] = author
+        res[title] = {"author": author, "id": book_id}
     return res
