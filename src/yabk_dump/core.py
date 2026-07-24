@@ -1,22 +1,20 @@
-import shutil
 import base64
-import zipfile
 import logging
+import shutil
+import zipfile
 from pathlib import Path
 from typing import Optional
 from xml.etree import ElementTree as ET
+
 import httpx
 from Crypto.Cipher import AES
 from tqdm import tqdm
 
+from yabk_dump.exc import InvalidInputError, UnauthorizedError
 
 logger = logging.getLogger(__name__)
 
 SERVICE_DOMAIN = "books.yandex.ru"
-
-
-class UnauthorizedError(Exception):
-    pass
 
 
 class AESDecryptor:
@@ -204,9 +202,9 @@ class BookClient:
     def __init__(self, output_dir: str, cookies: dict[str, str]) -> None:
         self._output = Path(output_dir)
         if not self._output.exists():
-            raise FileNotFoundError(f"path {output_dir} does not exist")
+            raise InvalidInputError(f"path {output_dir} does not exist")
         if not cookies:
-            raise ValueError("cookies must not be empty")
+            raise InvalidInputError("cookies must not be empty")
         self._cookies = cookies
 
     def get_book(self, book_id: str) -> BookProcessor:

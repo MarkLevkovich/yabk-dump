@@ -2,13 +2,15 @@ import logging
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 import questionary
 from colorama import Fore, Style, init
 from yandex_book import YandexBookClient
 
 from yabk_dump.about import get_book_info
-from yabk_dump.core import SERVICE_DOMAIN, BookClient, UnauthorizedError
+from yabk_dump.core import SERVICE_DOMAIN, BookClient
+from yabk_dump.exc import InvalidInputError, UnauthorizedError
 from yabk_dump.search import search_book
 
 init(autoreset=True)
@@ -57,12 +59,10 @@ def get_cookies():
     return {auth_cookie_name: session_id}
 
 
-def get_id_from_url(url: str) -> str:
+def get_id_from_url(url: str) -> str | None:
     if not url:
         return None
-    url = url.rstrip("/")
-    parts = url.split("/")
-    return parts[-1]
+    return urlparse(url).path.rstrip("/").split("/")[-1] or None
 
 
 def main(bookurl: str, client: YandexBookClient) -> None:
@@ -86,8 +86,6 @@ def main(bookurl: str, client: YandexBookClient) -> None:
         choices=["yes", "no"],
     ).ask()
     if download_q == "yes":
-        bookid = get_id_from_url(bookurl)
-
         outdir = questionary.text(
             "Output directory\n(Press Enter for default: ~/Downloads/yandex_books)"
         ).ask()
@@ -138,7 +136,7 @@ def main(bookurl: str, client: YandexBookClient) -> None:
 
 
 def run():
-    os.system("cls" if os.name == "nt" else "clear")
+    print("\033[H\033[J", end="")
     try:
         print(ascii_logo)
         ya_client = YandexBookClient()
@@ -155,17 +153,28 @@ def run():
             s_query = questionary.text("Search by title:").ask()
             data = search_book(s_query, ya_client)
             items = list(data.items())
+            if not items:
+                print("Not found")
+                sys.exit()
+            pad = max((len(t) for t, _ in data.items()), default=0)  # max str len
             for index, (title, vals) in enumerate(data.items()):
-                print(f"{index} --- title: {title} --- author: {vals['author']}")
-            select_book = int(input("Enter number: "))
+                print(
+                    f"  {Fore.CYAN}{index:>3}{Style.RESET_ALL}    "
+                    f"{Fore.YELLOW}{title:<{pad}}{Style.RESET_ALL}    "
+                    f"{Fore.GREEN}{vals['author']}{Style.RESET_ALL}"
+                )
+            try:
+                select_book = int(input("Enter number: "))
+            except ValueError:
+                raise InvalidInputError("Enter a number, not text")
+            if not 0 <= select_book < len(items):
+                logger.error("Incorrect id")
+                sys.exit()
             main(f"books.yandex.ru/{items[select_book][1]['id']}", ya_client)
-
-        else:
-            print("Unknown action, shutting down...")
-            sys.exit()
-
+    except InvalidInputError as e:
+        logger.error(e)
     except KeyboardInterrupt:
-        print("Cancelled.")
+        logger.info("Cancelled.")
     except UnauthorizedError:
         logger.error(
             "Session_id cookie is invalid or expired.\n"
@@ -175,7 +184,6 @@ def run():
         )
     except Exception:
         logger.exception("Unhandled error")
-        print("Oops... An error occurred")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ def search_book(query: str, yclient: YandexBookClient):
     if not results or "data" not in results or "search" not in results["data"]:
         return res
 
-    for item in results["data"]["search"]["page"]:
+    for item in results.get("data", {}).get("search", {}).get("page", []):
         book = item.get("book")
         if not book:
             continue
