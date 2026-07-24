@@ -84,8 +84,6 @@ def main(bookurl: str, client: YandexBookClient) -> None:
         choices=["yes", "no"],
     ).ask()
     if download_q == "yes":
-        bookid = get_id_from_url(bookurl)
-
         outdir = questionary.text(
             "Output directory\n(Press Enter for default: ~/Downloads/yandex_books)"
         ).ask()
@@ -153,17 +151,18 @@ def run():
             s_query = questionary.text("Search by title:").ask()
             data = search_book(s_query, ya_client)
             items = list(data.items())
+            if not items:
+                print("Not found")
             for index, (title, vals) in enumerate(data.items()):
                 print(f"{index} --- title: {title} --- author: {vals['author']}")
             select_book = int(input("Enter number: "))
+            if not 0 <= select_book <= len(items):
+                logger.error("Incorrect id")
+                sys.exit()
             main(f"books.yandex.ru/{items[select_book][1]['id']}", ya_client)
 
-        else:
-            print("Unknown action, shutting down...")
-            sys.exit()
-
     except KeyboardInterrupt:
-        print("Cancelled.")
+        logger.info("Cancelled.")
     except UnauthorizedError:
         logger.error(
             "Session_id cookie is invalid or expired.\n"
@@ -173,7 +172,6 @@ def run():
         )
     except Exception:
         logger.exception("Unhandled error")
-        print("Oops... An error occurred")
 
 
 if __name__ == "__main__":
