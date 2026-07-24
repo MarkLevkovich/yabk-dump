@@ -156,8 +156,13 @@ def run():
             if not items:
                 print("Not found")
                 sys.exit()
+            pad = max((len(t) for t, _ in data.items()), default=0)  # max str len
             for index, (title, vals) in enumerate(data.items()):
-                print(f"{index} --- title: {title} --- author: {vals['author']}")
+                print(
+                    f"  {Fore.CYAN}{index:>3}{Style.RESET_ALL}    "
+                    f"{Fore.YELLOW}{title:<{pad}}{Style.RESET_ALL}    "
+                    f"{Fore.GREEN}{vals['author']}{Style.RESET_ALL}"
+                )
             try:
                 select_book = int(input("Enter number: "))
             except ValueError:

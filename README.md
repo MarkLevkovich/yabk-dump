@@ -45,7 +45,7 @@ Result lands next to the output directory (e.g. `~/Downloads/yandex_books.epub`)
 
 ### Search
 
-Search books by title without a URL. Results show index, title, and author. Pick one and the flow continues into the same download pipeline as above.
+Search books by title without a URL. Results show index, title, and author. Pick one and the flow continues into the same download pipeline as above. Input is validated — non-numeric entries and out-of-range indices are caught with a clear error message.
 
 ## Manual session ID
 
