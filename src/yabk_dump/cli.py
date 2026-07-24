@@ -3,12 +3,14 @@ import os
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
+
 import questionary
 from colorama import Fore, Style, init
 from yandex_book import YandexBookClient
 
 from yabk_dump.about import get_book_info
-from yabk_dump.core import SERVICE_DOMAIN, BookClient, UnauthorizedError
+from yabk_dump.core import SERVICE_DOMAIN, BookClient
+from yabk_dump.exc import InvalidInputError, UnauthorizedError
 from yabk_dump.search import search_book
 
 init(autoreset=True)
@@ -153,14 +155,19 @@ def run():
             items = list(data.items())
             if not items:
                 print("Not found")
+                sys.exit()
             for index, (title, vals) in enumerate(data.items()):
                 print(f"{index} --- title: {title} --- author: {vals['author']}")
-            select_book = int(input("Enter number: "))
-            if not 0 <= select_book <= len(items):
+            try:
+                select_book = int(input("Enter number: "))
+            except ValueError:
+                raise InvalidInputError("Enter a number, not text")
+            if not 0 <= select_book < len(items):
                 logger.error("Incorrect id")
                 sys.exit()
             main(f"books.yandex.ru/{items[select_book][1]['id']}", ya_client)
-
+    except InvalidInputError as e:
+        logger.error(e)
     except KeyboardInterrupt:
         logger.info("Cancelled.")
     except UnauthorizedError:
