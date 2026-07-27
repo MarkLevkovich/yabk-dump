@@ -7,9 +7,9 @@ requires-python = ">=3.12"
 dependencies = [
     "colorama>=0.4.6",
     "httpx>=0.28.1",
-    "pycookiecheat>=0.8.0",
     "pycryptodome>=3.23.0",
     "questionary>=2.1.1",
+    "rookiepy>=0.5.6",
     "tqdm>=4.66.0",
     "yandex-book-api>=2.0.0",
 ]

@@ -12,6 +12,7 @@ from yabk_dump.about import get_book_info
 from yabk_dump.core import SERVICE_DOMAIN, BookClient
 from yabk_dump.exc import InvalidInputError, UnauthorizedError
 from yabk_dump.search import search_book
+import rookiepy
 
 init(autoreset=True)
 
@@ -46,10 +47,10 @@ def get_cookies():
         session_id = os.environ.get("SESSION_ID")
     else:
         try:
-            from pycookiecheat import chrome_cookies
-
-            cc = chrome_cookies(f"https://{SERVICE_DOMAIN}")
-            session_id = cc[auth_cookie_name]
+            cookies = rookiepy.chrome([SERVICE_DOMAIN, "yandex.ru"])
+            for cc in cookies:
+                if cc.get("name").lower() in ["session_id", "sessionid"]:
+                    session_id = cc["value"]
         except Exception:
             session_id = input(
                 f"Enter {auth_cookie_name} cookie\n"
@@ -92,6 +93,7 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
         "Delete source files after packaging?\n",
         choices=["Yes", "No"],
     ).ask()
+    _cookies = get_cookies()
 
     Path(outdir).mkdir(parents=True, exist_ok=True)
     for burl in bookurl:
@@ -116,7 +118,7 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
             choices=["yes", "no"],
         ).ask()
         if download_q == "yes":
-            client = BookClient(output_dir=outdir, cookies=get_cookies())
+            client = BookClient(output_dir=outdir, cookies=_cookies)
             book = client.get_book(book_id=bookid)
             if download == "Yes":
                 book.run()
