@@ -65,74 +65,76 @@ def get_id_from_url(url: str) -> str | None:
     return urlparse(url).path.rstrip("/").split("/")[-1] or None
 
 
-def main(bookurl: str, client: YandexBookClient) -> None:
-
-    bookid = get_id_from_url(bookurl)
-    book_data = get_book_info(client, bookid)
-    print(
-        f"\nTitle: {book_data.title}\n"
-        f"UUID: {book_data.uuid}\n"
-        f"Author(s): {book_data.authors}\n"
-        f"Translator(s): {book_data.translators}\n"
-        f"Language: {book_data.lang}\n"
-        f"Year: {book_data.publication_date}\n"
-        f"About: {book_data.about}\n"
-        f"Editor's note: {book_data.editor_annotation}\n"
-        f"Readers: {book_data.readers_count}\n"
-        f"Bookshelves: {book_data.bookshelves_count}\n"
-    )
-    download_q = questionary.select(
-        "Download this book?",
-        choices=["yes", "no"],
+def main(bookurl: list[str], yclient: YandexBookClient) -> None:
+    print("Download options:\n")
+    outdir = questionary.text(
+        "Output directory\n(Press Enter for default: ~/Downloads/yandex_books)"
     ).ask()
-    if download_q == "yes":
-        outdir = questionary.text(
-            "Output directory\n(Press Enter for default: ~/Downloads/yandex_books)"
+    if not outdir:
+        outdir = str(Path.home() / "Downloads" / "yandex_books")
+
+    download = questionary.select(
+        "Download book content?",
+        choices=["Yes", "No"],
+    ).ask()
+
+    del_css = questionary.select(
+        "Clear CSS from files?",
+        choices=["Yes", "No"],
+    ).ask()
+
+    make_epub = questionary.select(
+        "Package as EPUB?",
+        choices=["Yes", "No"],
+    ).ask()
+
+    del_downloaded = questionary.select(
+        "Delete source files after packaging?\n",
+        choices=["Yes", "No"],
+    ).ask()
+
+    Path(outdir).mkdir(parents=True, exist_ok=True)
+    for burl in bookurl:
+        bookid = get_id_from_url(burl)
+        if not bookid:
+            continue
+        book_data = get_book_info(yclient, bookid)
+        print(
+            f"\nTitle: {book_data.title}\n"
+            f"UUID: {book_data.uuid}\n"
+            f"Author(s): {book_data.authors}\n"
+            f"Translator(s): {book_data.translators}\n"
+            f"Language: {book_data.lang}\n"
+            f"Year: {book_data.publication_date}\n"
+            f"About: {book_data.about}\n"
+            f"Editor's note: {book_data.editor_annotation}\n"
+            f"Readers: {book_data.readers_count}\n"
+            f"Bookshelves: {book_data.bookshelves_count}\n"
+        )
+        download_q = questionary.select(
+            "Download this book?",
+            choices=["yes", "no"],
         ).ask()
-        if not outdir:
-            outdir = str(Path.home() / "Downloads" / "yandex_books")
+        if download_q == "yes":
+            client = BookClient(output_dir=outdir, cookies=get_cookies())
+            book = client.get_book(book_id=bookid)
+            if download == "Yes":
+                book.run()
+            if del_css == "Yes":
+                book.clear_styles()
+            if make_epub == "Yes":
+                book.build_epub()
+            if del_downloaded == "Yes":
+                book.cleanup()
 
-        download = questionary.select(
-            "Download book content?",
-            choices=["Yes", "No"],
-        ).ask()
-
-        del_css = questionary.select(
-            "Clear CSS from files?",
-            choices=["Yes", "No"],
-        ).ask()
-
-        make_epub = questionary.select(
-            "Package as EPUB?",
-            choices=["Yes", "No"],
-        ).ask()
-
-        del_downloaded = questionary.select(
-            "Delete source files after packaging?",
-            choices=["Yes", "No"],
-        ).ask()
-        print("\n")
-
-        Path(outdir).mkdir(parents=True, exist_ok=True)
-
-        client = BookClient(output_dir=outdir, cookies=get_cookies())
-        book = client.get_book(book_id=bookid)
-        if download == "Yes":
-            book.run()
-        if del_css == "Yes":
-            book.clear_styles()
-        if make_epub == "Yes":
-            book.build_epub()
-        if del_downloaded == "Yes":
-            book.cleanup()
-        text = f"""
-    Book successfully downloaded!
+    text = f"""
+    Book(s) successfully downloaded!
     Source files are saved in: {outdir}
 
     For conversion to other formats and uploading to your ebook reader,
     we recommend Calibre — https://calibre-ebook.com/
         """
-        logger.info(text)
+    logger.info(text)
 
 
 def run():
@@ -146,9 +148,10 @@ def run():
         ).ask()
         if action == "Download":
             bookurl = questionary.text(
-                "Book URL\n(e.g. https://books.yandex.ru/book/KFHDG3bp/)"
+                "Enter book URL(s) separated by commas\n(e.g. https://books.yandex.ru/book/KFHDG3bp/)"
             ).ask()
-            main(bookurl, ya_client)
+            urls = bookurl.strip().split(",")
+            main(urls, ya_client)
         elif action == "Search":
             s_query = questionary.text("Search by title:").ask()
             data = search_book(s_query, ya_client)
@@ -166,11 +169,11 @@ def run():
             try:
                 select_book = int(input("Enter number: "))
             except ValueError:
-                raise InvalidInputError("Enter a number, not text")
+                raise InvalidInputError("Please enter a number")
             if not 0 <= select_book < len(items):
-                logger.error("Incorrect id")
+                logger.error("Invalid selection")
                 sys.exit()
-            main(f"books.yandex.ru/{items[select_book][1]['id']}", ya_client)
+            main([f"books.yandex.ru/{items[select_book][1]['id']}"], ya_client)
     except InvalidInputError as e:
         logger.error(e)
     except KeyboardInterrupt:
