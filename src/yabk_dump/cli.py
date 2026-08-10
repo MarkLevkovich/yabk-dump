@@ -43,6 +43,7 @@ ascii_logo = r"""
 
 def get_cookies():
     auth_cookie_name = "Session_id"
+    session_id = None
     if os.environ.get("SESSION_ID") is not None:
         session_id = os.environ.get("SESSION_ID")
     else:
@@ -92,37 +93,40 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
 
     Path(outdir).mkdir(parents=True, exist_ok=True)
     for burl in bookurl:
-        bookid = get_id_from_url(burl)
-        if not bookid:
-            continue
-        book_data = get_book_info(yclient, bookid)
-        print(
-            f"\nTitle: {book_data.title}\n"
-            f"UUID: {book_data.uuid}\n"
-            f"Author(s): {book_data.authors}\n"
-            f"Translator(s): {book_data.translators}\n"
-            f"Language: {book_data.lang}\n"
-            f"Year: {book_data.publication_date}\n"
-            f"About: {book_data.about}\n"
-            f"Editor's note: {book_data.editor_annotation}\n"
-            f"Readers: {book_data.readers_count}\n"
-            f"Bookshelves: {book_data.bookshelves_count}\n"
-        )
-        download_q = questionary.select(
-            "Download this book?",
-            choices=["yes", "no"],
-        ).ask()
-        if download_q == "yes":
-            client = BookClient(output_dir=outdir, cookies=_cookies)
-            book = client.get_book(book_id=bookid)
+        try:
+            bookid = get_id_from_url(burl)
+            if not bookid:
+                continue
+            book_data = get_book_info(yclient, bookid)
+            print(
+                f"\nTitle: {book_data.title}\n"
+                f"UUID: {book_data.uuid}\n"
+                f"Author(s): {book_data.authors}\n"
+                f"Translator(s): {book_data.translators}\n"
+                f"Language: {book_data.lang}\n"
+                f"Year: {book_data.publication_date}\n"
+                f"About: {book_data.about}\n"
+                f"Editor's note: {book_data.editor_annotation}\n"
+                f"Readers: {book_data.readers_count}\n"
+                f"Bookshelves: {book_data.bookshelves_count}\n"
+            )
+            download_q = questionary.select(
+                "Download this book?",
+                choices=["yes", "no"],
+            ).ask()
             if download_q == "yes":
-                book.run()
-            if del_css == "Yes":
-                book.clear_styles()
-            if make_epub == "Yes":
-                book.build_epub()
-            if del_downloaded == "Yes":
-                book.cleanup()
+                client = BookClient(output_dir=outdir, cookies=_cookies)
+                book = client.get_book(book_id=bookid)
+                if download_q == "yes":
+                    book.run()
+                if del_css == "Yes":
+                    book.clear_styles()
+                if make_epub == "Yes":
+                    book.build_epub()
+                if del_downloaded == "Yes":
+                    book.cleanup()
+        except Exception:
+            logger.error("An error has occurred")
 
     text = f"""
     Book(s) successfully downloaded!
