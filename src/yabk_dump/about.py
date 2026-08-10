@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from yandex_book import YandexBookClient
 
@@ -28,9 +28,7 @@ def get_book_info(client: YandexBookClient, book_id: str) -> BookInfo:
         if book.translators
         else "No info",
         lang=book.language or "No info",
-        publication_date=str(
-            datetime.fromtimestamp(book.publication_date, tz=timezone.utc)
-        )
+        publication_date=str(datetime.fromtimestamp(book.publication_date, tz=UTC))
         if book.publication_date
         else "No info",
         about=book.annotation or "No info",

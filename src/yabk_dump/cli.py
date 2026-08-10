@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import questionary
+import rookiepy
 from colorama import Fore, Style, init
 from yandex_book import YandexBookClient
 
@@ -12,7 +13,6 @@ from yabk_dump.about import get_book_info
 from yabk_dump.core import SERVICE_DOMAIN, BookClient
 from yabk_dump.exc import InvalidInputError, UnauthorizedError
 from yabk_dump.search import search_book
-import rookiepy
 
 init(autoreset=True)
 
@@ -43,15 +43,16 @@ ascii_logo = r"""
 
 def get_cookies():
     auth_cookie_name = "Session_id"
+    session_id = None
     if os.environ.get("SESSION_ID") is not None:
         session_id = os.environ.get("SESSION_ID")
     else:
         try:
             cookies = rookiepy.chrome([SERVICE_DOMAIN, "yandex.ru"])
             for cc in cookies:
-                if cc.get("name").lower() in ["session_id", "sessionid"]:
+                if cc.get("name", "").lower() in ["session_id", "sessionid"]:
                     session_id = cc["value"]
-        except Exception:
+        except Exception:  # noqa: BLE001
             session_id = input(
                 f"Enter {auth_cookie_name} cookie\n"
                 f"(Open browser DevTools → Application → Cookies → https://{SERVICE_DOMAIN}\n"
@@ -74,11 +75,6 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
     if not outdir:
         outdir = str(Path.home() / "Downloads" / "yandex_books")
 
-    download = questionary.select(
-        "Download book content?",
-        choices=["Yes", "No"],
-    ).ask()
-
     del_css = questionary.select(
         "Clear CSS from files?",
         choices=["Yes", "No"],
@@ -94,13 +90,17 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
         choices=["Yes", "No"],
     ).ask()
     _cookies = get_cookies()
-
+    download_count = 0
     Path(outdir).mkdir(parents=True, exist_ok=True)
     for burl in bookurl:
-        bookid = get_id_from_url(burl)
-        if not bookid:
-            continue
-        book_data = get_book_info(yclient, bookid)
+        try:
+            bookid = get_id_from_url(burl)
+            if not bookid:
+                continue
+            book_data = get_book_info(yclient, bookid)
+        except Exception:  # noqa: BLE001
+            logger.error("Error while getting book metadata")
+            break
         print(
             f"\nTitle: {book_data.title}\n"
             f"UUID: {book_data.uuid}\n"
@@ -118,25 +118,29 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
             choices=["yes", "no"],
         ).ask()
         if download_q == "yes":
-            client = BookClient(output_dir=outdir, cookies=_cookies)
-            book = client.get_book(book_id=bookid)
-            if download == "Yes":
-                book.run()
-            if del_css == "Yes":
-                book.clear_styles()
-            if make_epub == "Yes":
-                book.build_epub()
-            if del_downloaded == "Yes":
-                book.cleanup()
-
-    text = f"""
-    Book(s) successfully downloaded!
-    Source files are saved in: {outdir}
-
-    For conversion to other formats and uploading to your ebook reader,
-    we recommend Calibre — https://calibre-ebook.com/
-        """
-    logger.info(text)
+            try:
+                client = BookClient(output_dir=outdir, cookies=_cookies)
+                book = client.get_book(book_id=bookid)
+                if download_q == "yes":
+                    book.run()
+                if del_css == "Yes":
+                    book.clear_styles()
+                if make_epub == "Yes":
+                    book.build_epub()
+                if del_downloaded == "Yes":
+                    book.cleanup()
+                download_count += 1
+            except Exception:  # noqa: BLE001
+                logger.error(f"Failed to process book {bookid}")
+    if download_count > 0:
+        text = f"""
+        Book(s) successfully downloaded!
+        Source files are saved in: {outdir}
+    
+        For conversion to other formats and uploading to your ebook reader,
+        we recommend Calibre — https://calibre-ebook.com/
+            """
+        logger.info(text)
 
 
 def run():

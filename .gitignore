@@ -219,3 +219,6 @@ __marimo__/
 
 # just md for devs
 BUGS.md
+RUBUGS.md
+# other trash
+src/yabk_dump/about.sublime-workspace
