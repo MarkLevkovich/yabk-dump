@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import questionary
+import rookiepy
 from colorama import Fore, Style, init
 from yandex_book import YandexBookClient
 
@@ -12,7 +13,6 @@ from yabk_dump.about import get_book_info
 from yabk_dump.core import SERVICE_DOMAIN, BookClient
 from yabk_dump.exc import InvalidInputError, UnauthorizedError
 from yabk_dump.search import search_book
-import rookiepy
 
 init(autoreset=True)
 
@@ -49,7 +49,7 @@ def get_cookies():
         try:
             cookies = rookiepy.chrome([SERVICE_DOMAIN, "yandex.ru"])
             for cc in cookies:
-                if cc.get("name").lower() in ["session_id", "sessionid"]:
+                if cc.get("name", "").lower() in ["session_id", "sessionid"]:
                     session_id = cc["value"]
         except Exception:
             session_id = input(
@@ -73,11 +73,6 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
     ).ask()
     if not outdir:
         outdir = str(Path.home() / "Downloads" / "yandex_books")
-
-    download = questionary.select(
-        "Download book content?",
-        choices=["Yes", "No"],
-    ).ask()
 
     del_css = questionary.select(
         "Clear CSS from files?",
@@ -120,7 +115,7 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
         if download_q == "yes":
             client = BookClient(output_dir=outdir, cookies=_cookies)
             book = client.get_book(book_id=bookid)
-            if download == "Yes":
+            if download_q == "yes":
                 book.run()
             if del_css == "Yes":
                 book.clear_styles()

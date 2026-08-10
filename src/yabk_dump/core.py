@@ -181,7 +181,7 @@ class BookProcessor:
             try:
                 content = self._api.fetch_bytes(url)
                 self._fm.write_file(content, f"OEBPS/{file_name}")
-            except httpx.RequestException:
+            except httpx.HTTPError:
                 logger.warning("failed to fetch '%s'", url)
 
     def cleanup(self) -> None:
