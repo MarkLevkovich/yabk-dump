@@ -52,7 +52,7 @@ def get_cookies():
             for cc in cookies:
                 if cc.get("name", "").lower() in ["session_id", "sessionid"]:
                     session_id = cc["value"]
-        except Exception:
+        except Exception:  # noqa: BLE001
             session_id = input(
                 f"Enter {auth_cookie_name} cookie\n"
                 f"(Open browser DevTools → Application → Cookies → https://{SERVICE_DOMAIN}\n"
@@ -90,7 +90,7 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
         choices=["Yes", "No"],
     ).ask()
     _cookies = get_cookies()
-
+    download_count = 0
     Path(outdir).mkdir(parents=True, exist_ok=True)
     for burl in bookurl:
         try:
@@ -98,23 +98,27 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
             if not bookid:
                 continue
             book_data = get_book_info(yclient, bookid)
-            print(
-                f"\nTitle: {book_data.title}\n"
-                f"UUID: {book_data.uuid}\n"
-                f"Author(s): {book_data.authors}\n"
-                f"Translator(s): {book_data.translators}\n"
-                f"Language: {book_data.lang}\n"
-                f"Year: {book_data.publication_date}\n"
-                f"About: {book_data.about}\n"
-                f"Editor's note: {book_data.editor_annotation}\n"
-                f"Readers: {book_data.readers_count}\n"
-                f"Bookshelves: {book_data.bookshelves_count}\n"
-            )
-            download_q = questionary.select(
-                "Download this book?",
-                choices=["yes", "no"],
-            ).ask()
-            if download_q == "yes":
+        except Exception:  # noqa: BLE001
+            logger.error("Error while getting book metadata")
+            break
+        print(
+            f"\nTitle: {book_data.title}\n"
+            f"UUID: {book_data.uuid}\n"
+            f"Author(s): {book_data.authors}\n"
+            f"Translator(s): {book_data.translators}\n"
+            f"Language: {book_data.lang}\n"
+            f"Year: {book_data.publication_date}\n"
+            f"About: {book_data.about}\n"
+            f"Editor's note: {book_data.editor_annotation}\n"
+            f"Readers: {book_data.readers_count}\n"
+            f"Bookshelves: {book_data.bookshelves_count}\n"
+        )
+        download_q = questionary.select(
+            "Download this book?",
+            choices=["yes", "no"],
+        ).ask()
+        if download_q == "yes":
+            try:
                 client = BookClient(output_dir=outdir, cookies=_cookies)
                 book = client.get_book(book_id=bookid)
                 if download_q == "yes":
@@ -125,17 +129,18 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
                     book.build_epub()
                 if del_downloaded == "Yes":
                     book.cleanup()
-        except Exception:
-            logger.error("An error has occurred")
-
-    text = f"""
-    Book(s) successfully downloaded!
-    Source files are saved in: {outdir}
-
-    For conversion to other formats and uploading to your ebook reader,
-    we recommend Calibre — https://calibre-ebook.com/
-        """
-    logger.info(text)
+                download_count += 1
+            except Exception:  # noqa: BLE001
+                logger.error(f"Failed to process book {bookid}")
+    if download_count > 0:
+        text = f"""
+        Book(s) successfully downloaded!
+        Source files are saved in: {outdir}
+    
+        For conversion to other formats and uploading to your ebook reader,
+        we recommend Calibre — https://calibre-ebook.com/
+            """
+        logger.info(text)
 
 
 def run():

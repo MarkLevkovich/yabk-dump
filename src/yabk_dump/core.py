@@ -3,7 +3,6 @@ import logging
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Optional
 from xml.etree import ElementTree as ET
 
 import httpx
@@ -125,12 +124,12 @@ class BookProcessor:
         book_id: str,
         api: YandexBooksAPI,
         file_manager: FileManager,
-        encryption_key: Optional[str] = None,
+        encryption_key: str | None = None,
     ) -> None:
         self._book_id = book_id
         self._api = api
         self._fm = file_manager
-        self._decryptor: Optional[AESDecryptor] = (
+        self._decryptor: AESDecryptor | None = (
             AESDecryptor.from_base64(encryption_key)
             if encryption_key is not None
             else None
