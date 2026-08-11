@@ -53,6 +53,8 @@ def get_cookies():
                 if cc.get("name", "").lower() in ["session_id", "sessionid"]:
                     session_id = cc["value"]
         except Exception:  # noqa: BLE001
+            logger.warning("Couldn't get the cookie automatically, do it manually:")
+        if not session_id:
             session_id = input(
                 f"Enter {auth_cookie_name} cookie\n"
                 f"(Open browser DevTools → Application → Cookies → https://{SERVICE_DOMAIN}\n"
@@ -136,7 +138,7 @@ def main(bookurl: list[str], yclient: YandexBookClient) -> None:
         text = f"""
         Book(s) successfully downloaded!
         Source files are saved in: {outdir}
-    
+
         For conversion to other formats and uploading to your ebook reader,
         we recommend Calibre — https://calibre-ebook.com/
             """
@@ -156,7 +158,7 @@ def run():
             bookurl = questionary.text(
                 "Enter book URL(s) separated by commas\n(e.g. https://books.yandex.ru/book/KFHDG3bp/)"
             ).ask()
-            urls = bookurl.strip().split(",")
+            urls = [b.strip() for b in bookurl.split(",")]
             main(urls, ya_client)
         elif action == "Search":
             s_query = questionary.text("Search by title:").ask()
