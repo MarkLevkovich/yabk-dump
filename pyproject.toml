@@ -19,10 +19,19 @@ dev = [
     "ruff>=0.15.20",
     "ty>=0.0.61",
     "pytest>=8.0.0",
+    "pytest-cov>=7.1.0",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["yabk_dump"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 96
+show_missing = true
 [build-system]
 requires = ["uv_build<=0.12.0"]
 build-backend = "uv_build"

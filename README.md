@@ -12,6 +12,10 @@
 
 </div>
 
+[![codecov](https://codecov.io/gh/levk-m/yabk-dump/branch/main/graph/badge.svg)](https://codecov.io/gh/levk-m/yabk-dump)
+[![Tests](https://img.shields.io/github/actions/workflow/status/levk-m/yabk-dump/test.yml?branch=main&label=tests)](https://github.com/levk-m/yabk-dump/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/levk-m/yabk-dump/blob/main/LICENSE)
+
 Look up info or download books from [books.yandex.ru](https://books.yandex.ru) — no account needed for metadata, Yandex Plus to download.
 
 Compatible with macOS and Linux. On Windows, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
