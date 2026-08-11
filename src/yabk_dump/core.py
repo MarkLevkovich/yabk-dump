@@ -166,7 +166,7 @@ class BookProcessor:
         opf_path = self._fm.resolve_path("OEBPS/content.opf")
         items = []
         for _event, elem in ET.iterparse(opf_path, events=["start"]):
-            if not (elem.tag.endswith("}item") and "href" in elem.attrib):
+            if elem.tag.split("}", 1)[-1] != "item" or "href" not in elem.attrib:
                 continue
             file_name = elem.attrib["href"]
             if file_name == "toc.ncx":

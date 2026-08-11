@@ -5,7 +5,11 @@ def search_book(query: str, yclient: YandexBookClient):
     results = yclient.search(query, types=["TEXTBOOK"])
     res = {}
 
-    if not results or "data" not in results or "search" not in results.get("data", ""):
+    if (
+        not results
+        or "data" not in results
+        or "search" not in (results.get("data", "") if results.get("data", "") else "")
+    ):
         return res
 
     for item in results.get("data", {}).get("search", {}).get("page", []):
