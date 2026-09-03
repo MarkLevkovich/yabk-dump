@@ -40,6 +40,11 @@ ascii_logo = r"""
 /____/                                            /_/
 """
 
+BROWSER_EXTRACTORS = [
+    "chrome",
+    "firefox",
+]
+
 
 def get_cookies():
     auth_cookie_name = "Session_id"
@@ -47,13 +52,22 @@ def get_cookies():
     if os.environ.get("SESSION_ID") is not None:
         session_id = os.environ.get("SESSION_ID")
     else:
-        try:
-            cookies = rookiepy.chrome([SERVICE_DOMAIN, "yandex.ru"])
-            for cc in cookies:
-                if cc.get("name", "").lower() in ["session_id", "sessionid"]:
-                    session_id = cc["value"]
-        except Exception:  # noqa: BLE001
-            logger.warning("Couldn't get the cookie automatically, do it manually:")
+        for name in BROWSER_EXTRACTORS:
+            extractor = getattr(rookiepy, name)
+            try:
+                cookies = extractor([SERVICE_DOMAIN, "yandex.ru"])
+                for cc in cookies:
+                    if cc.get("name", "").lower() in ["session_id", "sessionid"]:
+                        session_id = cc["value"]
+                        break
+            except Exception:  # noqa: BLE001
+                ...
+            if session_id:
+                break
+            logger.info(
+                "Couldn't find cookie in %s, trying next browser...",
+                name,
+            )
         if not session_id:
             session_id = input(
                 f"Enter {auth_cookie_name} cookie\n"

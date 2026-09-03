@@ -62,11 +62,14 @@ class TestGetCookies:
     def test_uses_env_session_id(self, monkeypatch):
         monkeypatch.setenv("SESSION_ID", "sess123")
         chrome = MagicMock()
+        firefox = MagicMock()
         monkeypatch.setattr(cli.rookiepy, "chrome", chrome)
+        monkeypatch.setattr(cli.rookiepy, "firefox", firefox)
         assert cli.get_cookies() == {"Session_id": "sess123"}
         chrome.assert_not_called()
+        firefox.assert_not_called()
 
-    def test_uses_matching_rookiepy_cookie(self, monkeypatch):
+    def test_uses_chrome_cookie(self, monkeypatch):
         monkeypatch.delenv("SESSION_ID", raising=False)
         monkeypatch.setattr(
             cli.rookiepy,
@@ -84,12 +87,31 @@ class TestGetCookies:
         )
         assert cli.get_cookies() == {"Session_id": "v2"}
 
+    def test_falls_back_to_firefox(self, monkeypatch):
+        monkeypatch.delenv("SESSION_ID", raising=False)
+        monkeypatch.setattr(
+            cli.rookiepy,
+            "chrome",
+            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no chrome")),
+        )
+        monkeypatch.setattr(
+            cli.rookiepy,
+            "firefox",
+            lambda *a, **k: [{"name": "Session_id", "value": "ff1"}],
+        )
+        assert cli.get_cookies() == {"Session_id": "ff1"}
+
     def test_no_match_falls_back_to_input(self, monkeypatch):
         monkeypatch.delenv("SESSION_ID", raising=False)
         monkeypatch.setattr(
             cli.rookiepy,
             "chrome",
             lambda *a, **k: [{"name": "other", "value": "x"}],
+        )
+        monkeypatch.setattr(
+            cli.rookiepy,
+            "firefox",
+            lambda *a, **k: [],
         )
         prompts = []
         monkeypatch.setattr(
@@ -102,6 +124,7 @@ class TestGetCookies:
     def test_cookie_without_name_falls_back_to_input(self, monkeypatch):
         monkeypatch.delenv("SESSION_ID", raising=False)
         monkeypatch.setattr(cli.rookiepy, "chrome", lambda *a, **k: [{"value": "x"}])
+        monkeypatch.setattr(cli.rookiepy, "firefox", lambda *a, **k: [])
         prompts = []
         monkeypatch.setattr(
             "builtins.input",
@@ -116,6 +139,11 @@ class TestGetCookies:
             cli.rookiepy,
             "chrome",
             lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no chrome")),
+        )
+        monkeypatch.setattr(
+            cli.rookiepy,
+            "firefox",
+            lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no firefox")),
         )
         prompts = []
         monkeypatch.setattr(
